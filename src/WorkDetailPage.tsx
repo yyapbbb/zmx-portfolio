@@ -1,5 +1,5 @@
 import { ArrowLeft } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import CircularGallery from './CircularGallery'
 import ImageDetailPage from './ImageDetailPage'
 import { LIFE_WALL_ITEMS } from './lifeImages'
@@ -12,6 +12,9 @@ type WorkDetailPageProps = {
 
 export default function WorkDetailPage({ detail, onBack }: WorkDetailPageProps) {
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null)
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches,
+  )
   const galleryItems = useMemo(
     () =>
       Array.from({ length: 6 }, (_, index) => {
@@ -24,6 +27,13 @@ export default function WorkDetailPage({ detail, onBack }: WorkDetailPageProps) 
       }),
     [detail],
   )
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 640px)')
+    const onChange = (event: MediaQueryListEvent) => setIsMobile(event.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
 
   if (activeImageIndex != null) {
     const activeImage = galleryItems[activeImageIndex]
@@ -42,13 +52,13 @@ export default function WorkDetailPage({ detail, onBack }: WorkDetailPageProps) 
       <div className="absolute inset-0 z-0">
         <CircularGallery
           items={galleryItems}
-          bend={-2.4}
-          imageScale={0.72}
+          bend={isMobile ? -1.7 : -2.4}
+          imageScale={isMobile ? 0.52 : 0.72}
           textColor="#ffffff"
-          borderRadius={0.06}
-          font="600 26px Inter"
-          scrollSpeed={1.4}
-          scrollEase={0.09}
+          borderRadius={isMobile ? 0.04 : 0.06}
+          font={isMobile ? '500 18px Inter' : '600 26px Inter'}
+          scrollSpeed={isMobile ? 1.1 : 1.4}
+          scrollEase={isMobile ? 0.12 : 0.09}
           onImageClick={(index) => setActiveImageIndex(index)}
         />
       </div>

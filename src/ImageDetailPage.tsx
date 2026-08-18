@@ -75,7 +75,7 @@ export default function ImageDetailPage({ images, onBack }: ImageDetailPageProps
             <img
               src={images[activeIndex].image}
               alt={images[activeIndex].text}
-              className="mx-auto max-h-[78vh] w-auto rounded-lg object-contain shadow-2xl"
+              className="mx-auto max-h-[76vh] max-w-[92vw] rounded-lg object-contain shadow-2xl w-auto h-auto"
             />
             <p className="mt-4 text-sm font-medium text-white/80">
               {images[activeIndex].text}

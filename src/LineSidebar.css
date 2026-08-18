@@ -95,3 +95,16 @@
 .work-line-sidebar {
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.55);
 }
+
+@media (max-width: 640px) {
+  .line-sidebar {
+    --marker-length: 40px;
+    --max-shift: 16px;
+    --item-gap: 16px;
+    --font-size: 0.95rem;
+  }
+
+  .line-sidebar__list {
+    padding: 0.5rem 0;
+  }
+}

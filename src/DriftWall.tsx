@@ -19,6 +19,21 @@ const DEFAULT_ITEMS = DRIFT_WALL_ITEMS
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
+const useMediaQuery = (query: string) => {
+  const get = () => typeof window !== 'undefined' && window.matchMedia(query).matches
+  const [matches, setMatches] = useState(get)
+
+  useEffect(() => {
+    const mq = window.matchMedia(query)
+    const onChange = (event: MediaQueryListEvent) => setMatches(event.matches)
+    mq.addEventListener('change', onChange)
+    setMatches(mq.matches)
+    return () => mq.removeEventListener('change', onChange)
+  }, [query])
+
+  return matches
+}
+
 const columnFactor = (index, variance) => {
   const pseudo = ((index * 0.6180339887 + 0.35) % 1) * 2 - 1
   return 1 + variance * pseudo
@@ -62,11 +77,85 @@ const DriftWall = ({
   const pointerRef = useRef({ x: 0, y: 0 })
   const pointerDampedRef = useRef({ x: 0, y: 0 })
   const lastTsRef = useRef(null)
+  const touchActiveRef = useRef(false)
+  const touchTimerRef = useRef(null)
 
   const [containerHeight, setContainerHeight] = useState(600)
   const [activeId, setActiveId] = useState(null)
   const activeIdRef = useRef(null)
   const [reduced, setReduced] = useState(false)
+  const isCompact = useMediaQuery('(max-width: 640px)')
+
+  const resolvedLayout = useMemo(
+    () =>
+      isCompact
+        ? {
+            columns: Math.max(2, Math.min(columns, 3)),
+            tileWidth: Math.min(tileWidth, 108),
+            tileHeight: Math.min(tileHeight, 72),
+            gap: Math.min(gap, 10),
+            radius: Math.min(radius, 10),
+            perspective: Math.min(perspective, 720),
+            depth: Math.min(depth, 64),
+            speed: Math.min(speed, 22),
+            variance: Math.min(variance, 0.28),
+            parallax: Math.min(parallax, 0.2),
+            lift: Math.min(lift, 30),
+            fade: Math.max(fade, 0.72),
+            tilt: tilt * 0.6,
+            turn: turn * 0.7,
+          }
+        : {
+            columns,
+            tileWidth,
+            tileHeight,
+            gap,
+            radius,
+            perspective,
+            depth,
+            speed,
+            variance,
+            parallax,
+            lift,
+            fade,
+            tilt,
+            turn,
+          },
+    [
+      isCompact,
+      columns,
+      tileWidth,
+      tileHeight,
+      gap,
+      radius,
+      perspective,
+      depth,
+      speed,
+      variance,
+      parallax,
+      lift,
+      fade,
+      tilt,
+      turn,
+    ],
+  )
+
+  const {
+    columns: activeColumns,
+    tileWidth: activeTileWidth,
+    tileHeight: activeTileHeight,
+    gap: activeGap,
+    radius: activeRadius,
+    perspective: activePerspective,
+    depth: activeDepth,
+    speed: activeSpeed,
+    variance: activeVariance,
+    parallax: activeParallax,
+    lift: activeLift,
+    fade: activeFade,
+    tilt: activeTilt,
+    turn: activeTurn,
+  } = resolvedLayout
 
   useEffect(() => {
     setReduced(prefersReducedMotion())
@@ -77,19 +166,19 @@ const DriftWall = ({
   }, [])
 
   const columnItems = useMemo(() => {
-    const cols = Array.from({ length: columns }, () => [])
-    items.forEach((item, i) => cols[i % columns].push(item))
+    const cols = Array.from({ length: activeColumns }, () => [])
+    items.forEach((item, i) => cols[i % activeColumns].push(item))
     return cols.map((col) => (col.length ? col : items.slice(0, 1)))
-  }, [items, columns])
+  }, [items, activeColumns])
 
   const columnMeta = useMemo(() => {
-    const unit = tileHeight + gap
+    const unit = activeTileHeight + activeGap
     return columnItems.map((col) => {
       const copyHeight = Math.max(unit, col.length * unit)
       const copies = Math.max(2, Math.ceil((containerHeight * 1.2) / copyHeight) + 1)
       return { copyHeight, copies }
     })
-  }, [columnItems, tileHeight, gap, containerHeight])
+  }, [columnItems, activeTileHeight, activeGap, containerHeight])
 
   useLayoutEffect(() => {
     if (!containerRef.current) return
@@ -104,9 +193,9 @@ const DriftWall = ({
     const dirSign = direction === 'up' ? 1 : -1
     return columnItems.map((_, c) => {
       const altSign = c % 2 === 0 ? 1 : -1
-      return speed * columnFactor(c, variance) * dirSign * altSign
+      return activeSpeed * columnFactor(c, activeVariance) * dirSign * altSign
     })
-  }, [columnItems, speed, direction, variance])
+  }, [columnItems, activeSpeed, direction, activeVariance])
 
   useEffect(() => {
     offsetsRef.current = columnMeta.map((meta, c) => meta.copyHeight * ((c * 0.37) % 1))
@@ -119,10 +208,10 @@ const DriftWall = ({
       if (!plane) return
       plane.style.transform =
         `translate(-50%, -50%) scale(1.18) ` +
-        `rotateX(${tilt + py}deg) rotateY(${turn + px}deg) rotateZ(${roll}deg) ` +
-        `translateZ(${-depth}px)`
+        `rotateX(${activeTilt + py}deg) rotateY(${activeTurn + px}deg) rotateZ(${roll}deg) ` +
+        `translateZ(${-activeDepth}px)`
     },
-    [tilt, turn, roll, depth],
+    [activeTilt, activeTurn, roll, activeDepth],
   )
 
   useEffect(() => {
@@ -131,7 +220,7 @@ const DriftWall = ({
       const dt = Math.min(0.05, Math.max(0, ts - lastTsRef.current) / 1000)
       lastTsRef.current = ts
 
-      const maxTilt = parallax * 8
+      const maxTilt = activeParallax * 8
       const targetX = pointerRef.current.x * maxTilt
       const targetY = -pointerRef.current.y * maxTilt
       const damp = 1 - Math.exp(-dt / 0.12)
@@ -143,7 +232,8 @@ const DriftWall = ({
         for (let c = 0; c < trackRefs.current.length; c++) {
           const meta = columnMeta[c]
           if (!meta) continue
-          const paused = wallHoveredRef.current && pauseOnHover
+          const paused =
+            touchActiveRef.current || (wallHoveredRef.current && pauseOnHover)
           const factor = paused || hoveredColRef.current === c ? 0 : 1
           const target = baseVelocities[c] * factor
 
@@ -173,7 +263,7 @@ const DriftWall = ({
       rafRef.current = null
       lastTsRef.current = null
     }
-  }, [baseVelocities, columnMeta, pauseOnHover, parallax, reduced, applyPlaneTransform])
+  }, [baseVelocities, columnMeta, pauseOnHover, activeParallax, reduced, applyPlaneTransform])
 
   const activate = useCallback((id, index) => {
     activeIdRef.current = id
@@ -191,7 +281,7 @@ const DriftWall = ({
     (e) => {
       const rect = containerRef.current?.getBoundingClientRect()
       if (!rect) return
-      if (parallax > 0 && !reduced) {
+      if (activeParallax > 0 && !reduced) {
         pointerRef.current = {
           x: (e.clientX - rect.left) / rect.width - 0.5,
           y: (e.clientY - rect.top) / rect.height - 0.5,
@@ -206,7 +296,7 @@ const DriftWall = ({
       hoveredColRef.current = Number(tile.dataset.col)
       setActiveId(id)
     },
-    [parallax, reduced],
+    [activeParallax, reduced],
   )
 
   const handlePointerLeaveWall = useCallback(() => {
@@ -224,21 +314,53 @@ const DriftWall = ({
     }
   }, [])
 
+  const handleTouchStart = useCallback(() => {
+    touchActiveRef.current = true
+    wallHoveredRef.current = true
+  }, [])
+
+  const handleTouchEnd = useCallback(() => {
+    if (touchTimerRef.current !== null) window.clearTimeout(touchTimerRef.current)
+    touchTimerRef.current = window.setTimeout(() => {
+      touchActiveRef.current = false
+      wallHoveredRef.current = false
+    }, 350)
+  }, [])
+
+  useEffect(
+    () => () => {
+      if (touchTimerRef.current !== null) window.clearTimeout(touchTimerRef.current)
+    },
+    [],
+  )
+
   const cssVars = useMemo(
     () => ({
-      '--dw-tile-w': `${tileWidth}px`,
-      '--dw-tile-h': `${tileHeight}px`,
-      '--dw-gap': `${gap}px`,
-      '--dw-radius': `${radius}px`,
-      '--dw-perspective': `${perspective}px`,
-      '--dw-lift': `${lift}px`,
+      '--dw-tile-w': `${activeTileWidth}px`,
+      '--dw-tile-h': `${activeTileHeight}px`,
+      '--dw-gap': `${activeGap}px`,
+      '--dw-radius': `${activeRadius}px`,
+      '--dw-perspective': `${activePerspective}px`,
+      '--dw-lift': `${activeLift}px`,
       '--dw-dim': dim,
       '--dw-gray': grayscale ? 1 : 0,
       '--dw-overlay': overlayColor,
-      '--dw-edge': `${Math.max(0, (1 - fade) * 100)}%`,
+      '--dw-edge': `${Math.max(0, (1 - activeFade) * 100)}%`,
       ...style,
     }),
-    [tileWidth, tileHeight, gap, radius, perspective, lift, dim, grayscale, overlayColor, fade, style],
+    [
+      activeTileWidth,
+      activeTileHeight,
+      activeGap,
+      activeRadius,
+      activePerspective,
+      activeLift,
+      activeFade,
+      dim,
+      grayscale,
+      overlayColor,
+      style,
+    ],
   )
 
   const renderTile = (item, id, colIndex) => {
@@ -285,6 +407,9 @@ const DriftWall = ({
         wallHoveredRef.current = true
       }}
       onPointerLeave={handlePointerLeaveWall}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
       role="group"
       aria-label="Drifting wall of tiles"
     >

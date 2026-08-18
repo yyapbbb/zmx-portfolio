@@ -124,3 +124,9 @@
     will-change: auto;
   }
 }
+
+@media (max-width: 640px) {
+  .drift-wall {
+    --dw-edge: 46%;
+  }
+}

@@ -412,6 +412,7 @@ class App {
     }
     this.lastTime = performance.now()
     this.lastStepTime = 0
+    this.touchMoved = false
     this.createRenderer()
     this.createCamera()
     this.createScene()
@@ -479,12 +480,18 @@ class App {
   }
   onTouchDown(e) {
     this.isDown = true
+    this.touchMoved = false
     this.scroll.position = this.scroll.current
     this.start = e.touches ? e.touches[0].clientX : e.clientX
+    this.startY = e.touches ? e.touches[0].clientY : e.clientY
   }
   onTouchMove(e) {
     if (!this.isDown) return
     const x = e.touches ? e.touches[0].clientX : e.clientX
+    const y = e.touches ? e.touches[0].clientY : e.clientY
+    if (Math.abs(x - this.start) > 12 || Math.abs(y - (this.startY || 0)) > 12) {
+      this.touchMoved = true
+    }
     const distance = (this.start - x) * (this.scrollSpeed * 0.025)
     this.scroll.target = this.scroll.position + distance
   }
@@ -676,13 +683,16 @@ export default function CircularGallery({
     let app
     let isMounted = true
     const handleClick = (event) => {
-      if (!app) return
+      if (!app || app.touchMoved) return
       const index = app.getItemIndexAt(event.clientX)
       const baseItems = items || []
       if (index == null || !baseItems[index]) return
       onImageClickRef.current?.(index, baseItems[index])
     }
-    containerRef.current.addEventListener('dblclick', handleClick)
+    const useSingleTap =
+      typeof window !== 'undefined' &&
+      (window.matchMedia('(hover: none)').matches || navigator.maxTouchPoints > 0)
+    containerRef.current.addEventListener(useSingleTap ? 'click' : 'dblclick', handleClick)
     resolveFont(font, fontUrl).then((resolvedFont) => {
       if (!isMounted || !containerRef.current) return
       app = new App(containerRef.current, {
@@ -700,7 +710,7 @@ export default function CircularGallery({
     return () => {
       isMounted = false
       if (app) app.destroy()
-      containerRef.current?.removeEventListener('dblclick', handleClick)
+      containerRef.current?.removeEventListener(useSingleTap ? 'click' : 'dblclick', handleClick)
     }
   }, [
     items,

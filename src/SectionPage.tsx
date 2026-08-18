@@ -238,14 +238,14 @@ export default function SectionPage({
             <ArrowLeft size={20} />
           </button>
           <div className="max-w-5xl text-center">
-            <div className="relative mx-auto max-h-[78vh] w-fit">
+            <div className="relative mx-auto max-h-[76vh] w-fit max-w-[92vw]">
               <img
                 src={
                   LIFE_WALL_THUMBS[lightboxIndex]?.image ||
                   LIFE_WALL_ITEMS[lightboxIndex].image
                 }
                 alt={LIFE_WALL_ITEMS[lightboxIndex].title}
-                className="max-h-[78vh] w-auto rounded-lg object-contain shadow-2xl"
+                className="max-h-[76vh] max-w-[92vw] rounded-lg object-contain shadow-2xl w-auto h-auto"
               />
               <img
                 src={LIFE_WALL_ITEMS[lightboxIndex].image}
