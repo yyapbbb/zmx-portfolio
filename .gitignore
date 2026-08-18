@@ -1,0 +1,14 @@
+node_modules
+.pnpm-store
+dist
+.DS_Store
+*.local
+*.log
+*.tsbuildinfo
+*.zip
+
+# Tencent Cloud EdgeOne
+.env
+.edgeone/*
+.tef_dist/*
+  
