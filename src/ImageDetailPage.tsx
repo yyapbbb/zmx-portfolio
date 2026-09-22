@@ -5,10 +5,15 @@ import Masonry from './Masonry'
 
 type ImageDetailPageProps = {
   images: { image: string; text: string }[]
+  masonryHeights?: number[]
   onBack: () => void
 }
 
-export default function ImageDetailPage({ images, onBack }: ImageDetailPageProps) {
+export default function ImageDetailPage({
+  images,
+  masonryHeights,
+  onBack,
+}: ImageDetailPageProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const items = useMemo(
     () =>
@@ -16,9 +21,9 @@ export default function ImageDetailPage({ images, onBack }: ImageDetailPageProps
         id: `masonry-${index}`,
         img: item.image,
         url: '#',
-        height: 300 + (index % 3) * 40,
+        height: masonryHeights?.[index] ?? 300 + (index % 3) * 40,
       })),
-    [images],
+    [images, masonryHeights],
   )
 
   return (
@@ -31,7 +36,7 @@ export default function ImageDetailPage({ images, onBack }: ImageDetailPageProps
           stagger={0.08}
           scaleOnHover
           hoverScale={0.95}
-          aspectRatio={4 / 3}
+          aspectRatio={masonryHeights ? undefined : 4 / 3}
           onItemClick={(item) => {
             const index = Number(String((item as { id?: string }).id ?? '').replace('masonry-', ''))
             setActiveIndex(Number.isFinite(index) ? index : 0)

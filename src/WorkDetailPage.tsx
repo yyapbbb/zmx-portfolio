@@ -10,6 +10,8 @@ type WorkDetailPageProps = {
   onBack: () => void
 }
 
+const MASONRY_HEIGHTS = [400, 250, 600, 320, 500, 360]
+
 export default function WorkDetailPage({ detail, onBack }: WorkDetailPageProps) {
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null)
   const galleryItems = useMemo(
@@ -31,6 +33,7 @@ export default function WorkDetailPage({ detail, onBack }: WorkDetailPageProps) 
       return (
         <ImageDetailPage
           images={galleryItems}
+          masonryHeights={MASONRY_HEIGHTS}
           onBack={() => setActiveImageIndex(null)}
         />
       )
