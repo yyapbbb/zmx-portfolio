@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 
 import './HorizontalGallery.css'
@@ -27,6 +28,16 @@ export default function HorizontalGallery({
   })
   const suppressClickRef = useRef(false)
   const suppressTimerRef = useRef<number | null>(null)
+  const [canGoPrevious, setCanGoPrevious] = useState(false)
+  const [canGoNext, setCanGoNext] = useState(false)
+
+  const updateControls = useCallback(() => {
+    const track = trackRef.current
+    if (!track) return
+    const maxScroll = Math.max(0, track.scrollWidth - track.clientWidth)
+    setCanGoPrevious(track.scrollLeft > 4)
+    setCanGoNext(track.scrollLeft < maxScroll - 4)
+  }, [])
 
   useEffect(() => {
     const track = trackRef.current
@@ -54,6 +65,21 @@ export default function HorizontalGallery({
     },
     [],
   )
+
+  useEffect(() => {
+    const track = trackRef.current
+    if (!track) return
+
+    updateControls()
+    track.addEventListener('scroll', updateControls, { passive: true })
+    const resizeObserver = new ResizeObserver(updateControls)
+    resizeObserver.observe(track)
+
+    return () => {
+      track.removeEventListener('scroll', updateControls)
+      resizeObserver.disconnect()
+    }
+  }, [updateControls])
 
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -120,31 +146,61 @@ export default function HorizontalGallery({
     [onImageClick],
   )
 
+  const moveByCard = useCallback((direction: -1 | 1) => {
+    const track = trackRef.current
+    if (!track) return
+
+    const card = track.querySelector<HTMLElement>('.horizontal-gallery__card')
+    const gap = Number.parseFloat(getComputedStyle(track).columnGap || '0') || 0
+    const step = (card?.getBoundingClientRect().width ?? track.clientWidth * 0.8) + gap
+    track.scrollBy({ left: direction * step, behavior: 'smooth' })
+  }, [])
+
   return (
-    <div
-      ref={trackRef}
-      className="horizontal-gallery"
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
-      role="region"
-      aria-label="横向项目图片画廊"
-    >
-      {items.map((item, index) => (
-        <button
-          key={`${item.text}-${index}`}
-          type="button"
-          className="horizontal-gallery__card"
-          onClick={() => handleCardClick(index, item)}
-          aria-label={item.text}
-        >
-          <span className="horizontal-gallery__media">
-            <img src={item.image} alt={item.text} draggable={false} />
-          </span>
-          <span className="horizontal-gallery__caption">{item.text}</span>
-        </button>
-      ))}
+    <div className="horizontal-gallery-shell">
+      <div
+        ref={trackRef}
+        className="horizontal-gallery"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        role="region"
+        aria-label="横向项目图片画廊"
+      >
+        {items.map((item, index) => (
+          <button
+            key={`${item.text}-${index}`}
+            type="button"
+            className="horizontal-gallery__card"
+            onClick={() => handleCardClick(index, item)}
+            aria-label={item.text}
+          >
+            <span className="horizontal-gallery__media">
+              <img src={item.image} alt={item.text} draggable={false} />
+            </span>
+            <span className="horizontal-gallery__caption">{item.text}</span>
+          </button>
+        ))}
+      </div>
+      <button
+        type="button"
+        className="horizontal-gallery__control horizontal-gallery__control--previous"
+        onClick={() => moveByCard(-1)}
+        disabled={!canGoPrevious}
+        aria-label="上一张"
+      >
+        <ChevronLeft size={22} />
+      </button>
+      <button
+        type="button"
+        className="horizontal-gallery__control horizontal-gallery__control--next"
+        onClick={() => moveByCard(1)}
+        disabled={!canGoNext}
+        aria-label="下一张"
+      >
+        <ChevronRight size={22} />
+      </button>
     </div>
   )
 }
