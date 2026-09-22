@@ -1,7 +1,7 @@
 import { ArrowLeft, ArrowRight, X } from 'lucide-react'
-import { useState } from 'react'
-import AccordionGallery from './AccordionGallery'
+import { useMemo, useState } from 'react'
 import DriftWall from './DriftWall'
+import HorizontalGallery from './HorizontalGallery'
 import Lanyard from './Lanyard'
 import LineSidebar from './LineSidebar'
 import ProfileCard from './ProfileCard'
@@ -57,6 +57,14 @@ export default function SectionPage({
   onNext,
 }: SectionPageProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const projectGalleryItems = useMemo(
+    () =>
+      PROJECT_ACCORDION_ITEMS.map((item) => ({
+        image: item.image,
+        text: item.label,
+      })),
+    [],
+  )
 
   return (
     <>
@@ -92,20 +100,10 @@ export default function SectionPage({
           />
         </div>
       ) : accordion ? (
-        <div className="absolute inset-0 z-0 flex items-center justify-center px-4 pb-10 pt-24 sm:px-8 md:px-12">
-          <AccordionGallery
-            items={PROJECT_ACCORDION_ITEMS}
-            height={520}
-            accentColor="#f0863f"
-            overlayColor="#070508"
-            textColor="#ffffff"
-            expandRatio={0.5}
-            gap={12}
-            radius={14}
-            parallax={0.45}
-            tilt={7}
-            grayscale
-            onItemClick={(index) => onProjectClick?.(index)}
+        <div className="absolute inset-0 z-0">
+          <HorizontalGallery
+            items={projectGalleryItems}
+            onImageClick={(index) => onProjectClick?.(index)}
           />
         </div>
       ) : dynamic ? (
