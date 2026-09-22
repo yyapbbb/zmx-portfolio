@@ -25,6 +25,7 @@ export default function HorizontalGallery({
     startX: 0,
     startScroll: 0,
     moved: false,
+    captured: false,
   })
   const suppressClickRef = useRef(false)
   const suppressTimerRef = useRef<number | null>(null)
@@ -93,8 +94,8 @@ export default function HorizontalGallery({
         startX: event.clientX,
         startScroll: track.scrollLeft,
         moved: false,
+        captured: false,
       }
-      track.setPointerCapture?.(event.pointerId)
     },
     [],
   )
@@ -106,7 +107,13 @@ export default function HorizontalGallery({
       if (!drag.active || !track) return
 
       const deltaX = event.clientX - drag.startX
-      if (Math.abs(deltaX) > 8) drag.moved = true
+      if (Math.abs(deltaX) > 8) {
+        drag.moved = true
+        if (!drag.captured) {
+          drag.captured = true
+          track.setPointerCapture?.(event.pointerId)
+        }
+      }
       track.scrollLeft = drag.startScroll - deltaX
     },
     [],
@@ -120,7 +127,7 @@ export default function HorizontalGallery({
 
       drag.active = false
       suppressClickRef.current = drag.moved
-      if (track?.releasePointerCapture) {
+      if (drag.captured && track?.releasePointerCapture) {
         try {
           track.releasePointerCapture(event.pointerId)
         } catch {
@@ -134,6 +141,7 @@ export default function HorizontalGallery({
       suppressTimerRef.current = window.setTimeout(() => {
         suppressClickRef.current = false
       }, 140)
+      drag.captured = false
     },
     [],
   )
